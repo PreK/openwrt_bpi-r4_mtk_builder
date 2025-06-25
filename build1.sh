@@ -7,8 +7,8 @@ rm -rf mtk-openwrt-feeds
 ### clone required repos
 git clone --branch main https://git.openwrt.org/openwrt/openwrt.git openwrt || true
 git clone  https://git01.mediatek.com/openwrt/feeds/mtk-openwrt-feeds || true
-cd mtk-openwrt-feeds; git checkout f737b2f5f33d611f9e96f91ffccd0531700b6282; cd -;	#Add Airoha AN8831X 10G PHY driver package
-echo "f737b2f" > mtk-openwrt-feeds/autobuild/unified/feed_revision
+#cd mtk-openwrt-feeds; git checkout f737b2f5f33d611f9e96f91ffccd0531700b6282; cd -;	#Add Airoha AN8831X 10G PHY driver package
+#echo "f737b2f" > mtk-openwrt-feeds/autobuild/unified/feed_revision
 
 ### wireless-regdb modification - this remove all regdb wireless countries restrictions
 rm -rf openwrt/package/firmware/wireless-regdb/patches/*.*
