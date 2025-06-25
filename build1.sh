@@ -16,10 +16,15 @@ cd openwrt
 mkdir -p feeds/mtk_openwrt_feed/patches-base
 cp -a ../mtk-openwrt-feeds/patches-base/*.patch feeds/mtk_openwrt_feed/patches-base/
 
+# Skip known incompatible patch (already integrated or obsolete)
 for patch in feeds/mtk_openwrt_feed/patches-base/*.patch; do
-  echo "Applying MTK base patch: $patch"
+  case "$patch" in
+    *0100-filogic-01-add-support-for-MediaTek-RFBs.patch) echo "Skipping incompatible patch: $patch"; continue ;;
+  esac
+  echo "Applying patch: $patch"
   patch -p1 < "$patch" || echo "Warning: Failed to apply $patch"
 done
+
 
 ### Update and install OpenWrt feeds
 ./scripts/feeds update -a
