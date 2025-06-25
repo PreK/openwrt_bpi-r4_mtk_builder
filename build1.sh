@@ -5,8 +5,7 @@ rm -rf openwrt
 rm -rf mtk-openwrt-feeds
 
 ### clone required repos
-git clone --branch openwrt-24.10 https://git.openwrt.org/openwrt/openwrt.git openwrt || true
-cd openwrt; git checkout 2a348bdbef52adb99280f01ac285d4415e91f4d6; cd -;		#bcm27xx-gpu-fw: update to v1.20250430
+git clone --branch main https://git.openwrt.org/openwrt/openwrt.git openwrt || true
 git clone  https://git01.mediatek.com/openwrt/feeds/mtk-openwrt-feeds || true
 cd mtk-openwrt-feeds; git checkout f737b2f5f33d611f9e96f91ffccd0531700b6282; cd -;	#Add Airoha AN8831X 10G PHY driver package
 echo "f737b2f" > mtk-openwrt-feeds/autobuild/unified/feed_revision
