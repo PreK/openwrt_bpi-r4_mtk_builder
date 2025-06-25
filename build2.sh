@@ -13,7 +13,7 @@ git clone https://github.com/gSpotx2f/luci-app-cpu-status.git feeds/luci/applica
 ./scripts/feeds install -a
 
 ### My Build Config
-\cp -r ../files/rahz_build.config .config
+\cp -r ../files/prek_build.config .config
 
 ### uncomment the line below to make your own config
 #make menuconfig
