@@ -1,43 +1,55 @@
 #!/bin/bash
+set -euo pipefail
 
-### delete old folders (if they exist) for a clean build
+### Clean previous build folders
 rm -rf openwrt
 rm -rf mtk-openwrt-feeds
 
-### clone required repos
-git clone --branch main https://git.openwrt.org/openwrt/openwrt.git openwrt || true
-git clone  https://git01.mediatek.com/openwrt/feeds/mtk-openwrt-feeds || true
-#cd mtk-openwrt-feeds; git checkout f737b2f5f33d611f9e96f91ffccd0531700b6282; cd -;	#Add Airoha AN8831X 10G PHY driver package
-#echo "f737b2f" > mtk-openwrt-feeds/autobuild/unified/feed_revision
+### Clone OpenWrt (main branch)
+git clone --branch main https://git.openwrt.org/openwrt/openwrt.git openwrt
 
-### wireless-regdb modification - this remove all regdb wireless countries restrictions
-rm -rf openwrt/package/firmware/wireless-regdb/patches/*.*
-rm -rf mtk-openwrt-feeds/autobuild/unified/filogic/mac80211/24.10/files/package/firmware/wireless-regdb/patches/*.*
-\cp -r files/500-tx_power.patch mtk-openwrt-feeds/autobuild/unified/filogic/mac80211/24.10/files/package/firmware/wireless-regdb/patches
-\cp -r files/regdb.Makefile openwrt/package/firmware/wireless-regdb/Makefile
+### Clone MediaTek MTK feeds (master branch)
+git clone https://git01.mediatek.com/openwrt/feeds/mtk-openwrt-feeds mtk-openwrt-feeds
 
-### radio noise reading fix
-#wget https://raw.githubusercontent.com/woziwrt/bpi-r4-openwrt-builder/refs/heads/main/my_files/200-wozi-libiwinfo-fix_noise_reading_for_radios.patch \
-# -O openwrt/package/network/utils/iwinfo/patches/200-wozi-libiwinfo-fix_noise_reading_for_radios.patch
+### Apply MTK base patches (optional but recommended)
+cd openwrt
+mkdir -p feeds/mtk_openwrt_feed/patches-base
+cp -a ../mtk-openwrt-feeds/patches-base/*.patch feeds/mtk_openwrt_feed/patches-base/
 
-### original txpower fix
-#wget https://raw.githubusercontent.com/woziwrt/bpi-r4-openwrt-builder/refs/heads/main/my_files/99999_tx_power_check.patch \
- #-O mtk-openwrt-feeds/autobuild/unified/filogic/mac80211/24.10/files/package/kernel/mt76/patches/99999_tx_power_check.patch
+for patch in feeds/mtk_openwrt_feed/patches-base/*.patch; do
+  echo "Applying MTK base patch: $patch"
+  patch -p1 < "$patch" || echo "Warning: Failed to apply $patch"
+done
 
-### fix "use-tx_power-from-default-fw-if-EEPROM-contains-0"
+### Update and install OpenWrt feeds
+./scripts/feeds update -a
+./scripts/feeds install -a
+
+### Optional: Remove wireless regulatory restrictions
+rm -rf package/firmware/wireless-regdb/patches/*.*
+cp -v ../files/500-tx_power.patch package/firmware/wireless-regdb/patches/
+cp -v ../files/regdb.Makefile package/firmware/wireless-regdb/Makefile
+
+### Fix for iwinfo noise reading
+wget https://raw.githubusercontent.com/woziwrt/bpi-r4-openwrt-builder/main/my_files/200-wozi-libiwinfo-fix_noise_reading_for_radios.patch \
+  -O package/network/utils/iwinfo/patches/200-wozi-libiwinfo-fix_noise_reading_for_radios.patch
+
+### TX Power EEPROM zero fix (for mt76)
 wget https://github.com/openwrt/mt76/commit/aaf90b24fde77a38ee9f0a60d7097ded6a94ad1f.patch \
- -O mtk-openwrt-feeds/autobuild/unified/filogic/mac80211/24.10/files/package/kernel/mt76/patches/9997-use-tx_power-from-default-fw-if-EEPROM-contains-0s.patch
+  -O package/kernel/mt76/patches/9997-use-tx_power-if-eeprom-0.patch
 
-### required & thermal zone 
-wget https://raw.githubusercontent.com/woziwrt/bpi-r4-openwrt-builder/refs/heads/main/my_files/1007-wozi-arch-arm64-dts-mt7988a-add-thermal-zone.patch \
- -O mtk-openwrt-feeds/24.10/patches-base/1007-wozi-arch-arm64-dts-mt7988a-add-thermal-zone.patch
+### Thermal zone support for MT7988
+wget https://raw.githubusercontent.com/woziwrt/bpi-r4-openwrt-builder/main/my_files/1007-wozi-arch-arm64-dts-mt7988a-add-thermal-zone.patch \
+  -O target/linux/mediatek/patches-6.6/1007-wozi-add-thermal-zone.patch
+
+### Optional: Remove perf package if unwanted (depends on config)
 
 ## adjust some config
 sed -i 's/CONFIG_PACKAGE_perf=y/# CONFIG_PACKAGE_perf is not set/' mtk-openwrt-feeds/autobuild/unified/filogic/mac80211/24.10/defconfig
 sed -i 's/CONFIG_PACKAGE_perf=y/# CONFIG_PACKAGE_perf is not set/' mtk-openwrt-feeds/autobuild/autobuild_5.4_mac80211_release/mt7988_wifi7_mac80211_mlo/.config
 sed -i 's/CONFIG_PACKAGE_perf=y/# CONFIG_PACKAGE_perf is not set/' mtk-openwrt-feeds/autobuild/autobuild_5.4_mac80211_release/mt7986_mac80211/.config
-
-cd openwrt  
-bash ../mtk-openwrt-feeds/autobuild/unified/autobuild.sh filogic-mac80211-mt7988_rfb-mt7996 log_file=make
+### Start build process (adjust target if needed)
+make menuconfig  # Select MT7988 target and options manually
+make -j$(nproc) V=s
 
 exit 0
